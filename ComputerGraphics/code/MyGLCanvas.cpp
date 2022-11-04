@@ -35,13 +35,32 @@ MyGLCanvas::~MyGLCanvas() {
    The function returns the ray
 */
 glm::vec3 MyGLCanvas::generateRay(int pixelX, int pixelY) {
-	glm::vec3 ray;
-	return ray;
+	glm::vec3 eyePoint = camera.getEyePoint();
+	glm::vec3 lookVector = camera.getLookVector();
+	float nearPlane = camera.getNearPlane();
+	int screenWidth = camera.getScreenWidth(); // do we use pixelWidth?
+	int screenHeight = camera.getScreenHeight();
+	float viewAngle = camera.getViewAngle();
+	float screenWidthRatio = (float)screenHeight / (float)screenWidth;
+	glm::vec3 upVector = camera.getUpVector();
+	glm::vec3 w = -1.0f * lookVector / glm::length(lookVector);
+	glm::vec3 u = glm::cross(upVector, w) / glm::length(glm::cross(upVector, w));
+	glm::vec3 v = glm::cross(w, u);
+	float width = (tan(glm::radians(viewAngle) / 2.0f) * nearPlane); // w/2=tan(theta_w/2)*far
+	float height = width * screenWidthRatio;
+
+	glm::vec3 Q = eyePoint + nearPlane * lookVector;
+	float a = -width + 2.0f * width * ((float)pixelX / (float)screenWidth);
+	float b = -height + 2.0f * height * ((float)pixelY / (float)screenHeight);
+
+	glm::vec3 S = Q + a * u + b * v;
+	glm::vec3 dHat = glm::normalize(S - eyePoint);
+	dHat.y = -dHat.y;
+	return dHat;
 }
 
 glm::vec3 MyGLCanvas::getEyePoint() {
-	glm::vec3 eye;
-	return eye;
+	return camera.getEyePoint();
 }
 
 /* The getIsectPointWorldCoord function accepts three input parameters:
@@ -52,7 +71,7 @@ glm::vec3 MyGLCanvas::getEyePoint() {
 	The function should return the intersection point on the sphere
 */
 glm::vec3 MyGLCanvas::getIsectPointWorldCoord(glm::vec3 eye, glm::vec3 ray, float t) {
-	glm::vec3 p;
+	glm::vec3 p = eye + t * ray;
 	return p;
 }
 
@@ -67,6 +86,23 @@ glm::vec3 MyGLCanvas::getIsectPointWorldCoord(glm::vec3 eye, glm::vec3 ray, floa
 */
 double MyGLCanvas::intersect (glm::vec3 eyePointP, glm::vec3 rayV, glm::mat4 transformMatrix) {
 	double t = -1;
+
+	glm::vec4 eyePointPO = glm::inverse(transformMatrix) * glm::vec4(eyePointP, 0);
+	glm::vec4 d = glm::inverse(transformMatrix) * glm::vec4(rayV, 0);
+
+	float r = 0.5;
+	float a = glm::dot(d, d);
+	float b = 2 * glm::dot(eyePointPO, d);
+	float c = glm::dot(eyePointPO, eyePointPO) - r * r;
+	double delta = b * b - 4 * a * c;
+
+	if (delta <= 0) {
+		return t;
+	}
+	else {
+		return std::min((-b + sqrt(delta)) / (2 * a), (-b - sqrt(delta)) / (2 * a));
+	}
+
 	return t;
 }
 
@@ -200,6 +236,15 @@ int MyGLCanvas::handle(int e) {
 		mouseY = (int)Fl::event_y();
 		if (drag == true) {
 			printf("drag and move\n");
+
+			//idea before lab ends:
+			// we click once to start dragging (FL_PUSH - gives us old_t, old_center, etc)
+			// for each frame of FL_DRAG:
+			//	//NOTE: we dont need to do x and y independently, can just use the vector
+				// compute change in x (old_x[intersection x] - new_x) and change in y from previous
+				//increment sphere_center by those changes in x and y
+			//move it depth wise based on old_t
+
 			//TODO: compute the new spherePosition as you drag your mouse. spherePosition represents the coordinate for the center of the sphere
 			//HINT: use the old t value (computed from when you first intersect the sphere (before dragging starts)) to determine the new spherePosition
 			spherePosition;
