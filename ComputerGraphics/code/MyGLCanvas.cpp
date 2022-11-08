@@ -87,13 +87,13 @@ glm::vec3 MyGLCanvas::getIsectPointWorldCoord(glm::vec3 eye, glm::vec3 ray, floa
 double MyGLCanvas::intersect (glm::vec3 eyePointP, glm::vec3 rayV, glm::mat4 transformMatrix) {
 	double t = -1;
 
-	glm::vec4 eyePointPO = glm::inverse(transformMatrix) * glm::vec4(eyePointP, 0);
+	glm::vec4 eyePointPO = glm::inverse(transformMatrix) * glm::vec4(eyePointP, 1);
 	glm::vec4 d = glm::inverse(transformMatrix) * glm::vec4(rayV, 0);
 
 	float r = 0.5;
-	float a = glm::dot(d, d);
-	float b = 2 * glm::dot(eyePointPO, d);
-	float c = glm::dot(eyePointPO, eyePointPO) - r * r;
+	float a = glm::dot(glm::vec3(d), glm::vec3(d));
+	float b = 2 * glm::dot(glm::vec3(eyePointPO), glm::vec3(d));
+	float c = glm::dot(glm::vec3(eyePointPO), glm::vec3(eyePointPO)) - r * r;
 	double delta = b * b - 4 * a * c;
 
 	if (delta <= 0) {
@@ -245,9 +245,28 @@ int MyGLCanvas::handle(int e) {
 				//increment sphere_center by those changes in x and y
 			//move it depth wise based on old_t
 
+			glm::vec3 eyePointP = getEyePoint();
+			glm::vec3 dHat = generateRay(mouseX, mouseY);
+			//glm::vec3 sphereTransV(spherePosition[0], spherePosition[1], spherePosition[2]);
+			//float t = intersect(eyePointP, rayV, glm::translate(glm::mat4(1.0), sphereTransV));
+			glm::vec3 isectPointWorldCoord = getIsectPointWorldCoord(eyePointP, dHat, oldT);
+
+
+			//glm::vec3 mousePos = glm::vec3((float) mouseX / camera.getScreenWidth(), mouseY / camera.getScreenHeight(), 0);
+
+			glm::vec3 distance = oldIsectPoint - oldCenter;
+			//glm::vec3 distance = isectPointWorldCoord - oldIsectPoint;
+
+			spherePosition = isectPointWorldCoord - distance;
+
+			//spherePosition.z = oldCenter.z;
+
+			oldCenter = spherePosition;
+			oldIsectPoint = isectPointWorldCoord;
+
 			//TODO: compute the new spherePosition as you drag your mouse. spherePosition represents the coordinate for the center of the sphere
 			//HINT: use the old t value (computed from when you first intersect the sphere (before dragging starts)) to determine the new spherePosition
-			spherePosition;
+			//spherePosition;
 		}
 		return (1);
 	case FL_MOVE:
